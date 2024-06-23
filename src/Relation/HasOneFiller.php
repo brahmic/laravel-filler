@@ -16,7 +16,7 @@ class HasOneFiller extends RelationFiller
      * @param string $relationName
      * @throws \Exception
      */
-    public function fill(Model $model, Relation $relation, ?array $data, string $relationName): void
+    public function fill(Model $model, HasOne|Relation $relation, ?array $data, string $relationName): void
     {
         /** @var ?Model $existsModel */
         $existsModel = $this->resolver->loadRelation($model, $relationName);
@@ -38,6 +38,6 @@ class HasOneFiller extends RelationFiller
 
     protected function setRelationField(Model $model, HasOne $relation, Model $related): void
     {
-        $model->{$relation->getForeignKeyName()} = $related ? $related->{$relation->getLocalKeyName()} : null;
+        $model->{$relation->getForeignKeyName()} = $related?->{$relation->getLocalKeyName()};
     }
 }

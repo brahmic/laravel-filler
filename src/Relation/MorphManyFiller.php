@@ -16,7 +16,7 @@ class MorphManyFiller extends RelationFiller
      * @param array|null $data
      * @param string $relationName
      */
-    public function fill(Model $model, Relation $relation, ?array $data, string $relationName): void
+    public function fill(Model $model, MorphMany|Relation $relation, ?array $data, string $relationName): void
     {
         if (is_null($data)) {
             return;

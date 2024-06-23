@@ -15,7 +15,7 @@ class BelongsToFiller extends RelationFiller
      * @param array|null $data
      * @param string $relationName
      */
-    function fill(Model $model, Relation $relation, ?array $data, string $relationName): void
+    function fill(Model $model, BelongsTo|Relation $relation, ?array $data, string $relationName): void
     {
         $related = $data ? $this->resolver->find($relation->getRelated(), $data) : null;
 
@@ -26,6 +26,6 @@ class BelongsToFiller extends RelationFiller
 
     protected function fillRelationField(Model $model, BelongsTo $relation, ?Model $related): void
     {
-        $model->{$relation->getForeignKeyName()} = $related ? $related->{$relation->getOwnerKeyName()} : null;
+        $model->{$relation->getForeignKeyName()} = $related?->{$relation->getOwnerKeyName()};
     }
 }

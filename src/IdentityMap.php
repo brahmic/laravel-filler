@@ -9,12 +9,12 @@ use Illuminate\Support\Collection;
 
 class IdentityMap extends Collection
 {
-    protected $trackedRelations = [];
+    protected array $trackedRelations = [];
 
     /**
      * @param Model $model
      * @param array|null $data
-     * @return string
+     * @return string|null
      */
     public static function resolveHashName(Model $model, ?array $data = null): ?string
     {
@@ -28,7 +28,7 @@ class IdentityMap extends Collection
     /**
      * @param Model $model
      * @param array|null $data
-     * @return string
+     * @return string|null
      */
     protected static function resolveKey(Model $model, ?array $data = null): ?string
     {
@@ -42,10 +42,10 @@ class IdentityMap extends Collection
     }
 
     /**
-     * @param Model|EloquentCollection $relation
+     * @param EloquentCollection|Model|null $relation
      * @return array|string|null
      */
-    public function remember($relation)
+    public function remember(Model|EloquentCollection|null $relation): array|string|null
     {
         if (is_null($relation)) {
             return null;
@@ -76,12 +76,12 @@ class IdentityMap extends Collection
         return $hashName;
     }
 
-    public function isTrackedRelation($key)
+    public function isTrackedRelation($key): bool
     {
         return in_array($key, $this->trackedRelations);
     }
 
-    public static function resolveRelationHashName(Model $model, $relationName)
+    public static function resolveRelationHashName(Model $model, $relationName): string
     {
         return static::resolveHashName($model) . '#' . $relationName;
     }

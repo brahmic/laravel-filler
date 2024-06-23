@@ -13,16 +13,16 @@ abstract class RelationFiller
     /**
      * @var Resolver
      */
-    protected $resolver;
+    protected Resolver $resolver;
     /**
      * @var UnitOfWork
      */
-    protected $uow;
+    protected UnitOfWork $uow;
 
     /**
      * @var Filler
      */
-    protected $filler;
+    protected Filler $filler;
 
     public function __construct(Resolver $resolver, UnitOfWork $uow, Filler $filler)
     {

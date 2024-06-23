@@ -17,7 +17,7 @@ class MorphToFiller extends RelationFiller
      * @param string $relationName
      * @throws \Exception
      */
-    function fill(Model $model, Relation $relation, ?array $data, string $relationName): void
+    function fill(Model $model, MorphTo|Relation $relation, ?array $data, string $relationName): void
     {
         $related = $this->filler->fill(get_class($relation->getRelated()), $data);
 
@@ -28,6 +28,6 @@ class MorphToFiller extends RelationFiller
 
     protected function fillRelationField(Model $model, BelongsTo $relation, ?Model $related): void
     {
-        $model->{$relation->getForeignKeyName()} = $related ? $related->{$relation->getOwnerKeyName()} : null;
+        $model->{$relation->getForeignKeyName()} = $related?->{$relation->getOwnerKeyName()};
     }
 }

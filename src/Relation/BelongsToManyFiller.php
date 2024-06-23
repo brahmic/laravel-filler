@@ -16,7 +16,7 @@ class BelongsToManyFiller extends RelationFiller
      * @param array|null $data
      * @param string $relationName
      */
-    public function fill(Model $model, Relation $relation, ?array $data, string $relationName): void
+    public function fill(Model $model, BelongsToMany|Relation $relation, ?array $data, string $relationName): void
     {
         // If no data provided, just do nothing, because of this is "to many" relation,
         // and we cant set this relation to null.

@@ -13,16 +13,17 @@ class Resolver
     /**
      * @var IdentityMap
      */
-    private $identityMap;
+    private IdentityMap $identityMap;
 
     /**
      * @var KeyGeneratorInterface
      */
-    private $generator;
+    private KeyGeneratorInterface $generator;
 
     /**
      * Resolver constructor.
      * @param IdentityMap $map
+     * @param KeyGeneratorInterface $generator
      */
     public function __construct(IdentityMap $map, KeyGeneratorInterface $generator)
     {
@@ -35,7 +36,7 @@ class Resolver
      * @param array $data
      * @return Model
      */
-    public function resolve($model, array $data): Model
+    public function resolve(Model|string $model, array $data): Model
     {
         $model = $this->resolveModelInstance($model);
 
@@ -75,10 +76,10 @@ class Resolver
 
     /**
      * @param Model $model
-     * @param string $relation
-     * @return mixed|Collection|Model|Model[]|null
+     * @param string $relationName
+     * @return mixed|Collection|Model|null
      */
-    public function loadRelation(Model $model, string $relationName)
+    public function loadRelation(Model $model, string $relationName): mixed
     {
         if (!$model->relationLoaded($relationName)) {
             $model->load($relationName);
@@ -118,19 +119,12 @@ class Resolver
      * @return Model
      * @throws InvalidArgumentException
      */
-    protected function resolveModelInstance($model): Model
+    protected function resolveModelInstance(mixed $model): Model
     {
-        switch (true) {
-            case is_object($model) && $model instanceof Model:
-                return $model;
-            case is_string($model) && is_subclass_of($model, Model::class):
-                /**
-                 * @psalm-var class-string $model
-                 * @psalm-suppress LessSpecificReturnStatement
-                 */
-                return new $model;
-            default:
-                throw new InvalidArgumentException('Argument $model should be instance or subclass of ' . Model::class);
-        }
+        return match (true) {
+            $model instanceof Model => $model,
+            is_string($model) && is_subclass_of($model, Model::class) => new $model,
+            default => throw new InvalidArgumentException('Argument $model should be instance or subclass of ' . Model::class),
+        };
     }
 }

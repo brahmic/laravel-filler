@@ -30,16 +30,16 @@ class Filler
     /**
      * @var Resolver
      */
-    private $resolver;
+    private Resolver $resolver;
 
     /**
      * @var RelationFiller[]
      */
-    protected $relationFillers = [];
+    protected array $relationFillers = [];
     /**
      * @var UnitOfWork
      */
-    private $uow;
+    private UnitOfWork $uow;
 
     /**
      * Filler constructor.
@@ -56,11 +56,9 @@ class Filler
     /**
      * @param mixed|Model|string $model
      * @param array|null $data
-     * @param string $path
      * @return Model|null
-     * @throws Exception
      */
-    public function fill($model, ?array $data): ?Model
+    public function fill(mixed $model, ?array $data): ?Model
     {
         assert(is_subclass_of($model, Model::class));
 
@@ -81,18 +79,21 @@ class Filler
         return $model;
     }
 
-    public function getRelationFiller($model, $relationName)
+    public function getRelationFiller($model, $relationName): ?RelationFiller
     {
         if (is_string($model)) {
             $model = new $model;
         }
 
         $relation = $this->extractRelation($model, $relationName);
+
         foreach ($this->relationFillers as $class => $filler) {
             if ($relation instanceof $class) {
                 return $filler;
             }
         }
+
+        return null; //todo throw exception?
     }
 
     /**
@@ -104,8 +105,8 @@ class Filler
     }
 
     /**
-     * @param $model
-     * @param $data
+     * @param string $model
+     * @param array $data
      * @return Model
      */
     public function resolve(string $model, array $data): Model
@@ -140,7 +141,7 @@ class Filler
     /**
      * @param Model $model
      * @param string $relationName
-     * @param array $relationData
+     * @param array|null $relationData
      */
     protected function fillRelation(Model $model, string $relationName, ?array $relationData): void
     {
@@ -168,7 +169,7 @@ class Filler
     }
 
 
-    public function clear()
+    public function clear(): void
     {
         $this->uow->clear();
     }

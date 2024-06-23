@@ -2,6 +2,8 @@
 
 namespace Brahmic\Filler;
 
+use Error;
+use Exception;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 
@@ -10,22 +12,22 @@ class UnitOfWork
     /**
      * @var Model[]
      */
-    protected $toPersist = [];
+    protected array $toPersist = [];
 
     /**
      * @var Model[]
      */
-    protected $toDestroy = [];
+    protected array $toDestroy = [];
 
     /**
      * @var callable[]|array
      */
-    protected $onFlushInstructions = [];
+    protected array $onFlushInstructions = [];
 
     /**
      * @var IdentityMap
      */
-    private $map;
+    private IdentityMap $map;
 
     public function __construct(IdentityMap $map)
     {
@@ -60,7 +62,7 @@ class UnitOfWork
             $this->doDestroy();
             $this->doOnFlush();
             DB::commit();
-        } catch (\Exception|\Error $e) {
+        } catch (Exception|Error $e) {
             DB::rollBack();
             throw $e;
         }
