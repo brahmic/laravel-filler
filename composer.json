@@ -1,0 +1,34 @@
+{
+    "name": "brahmic/laravel-filler",
+    "description": "Laravel Eloquent Database Filler",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "brahmic",
+            "email": "brhamable@yandex.net"
+        },
+        {
+            "name": "greabоck",
+            "email": "greabock@example.com"
+        }
+    ],
+    "require": {
+        "illuminate/database": "^8.0|^9.0|^10.0|^11.0",
+        "illuminate/support": "^8.0|^9.0|^10.0|^11.0",
+        "ramsey/uuid": "^4.1.1"
+    },
+    "minimum-stability": "stable",
+    "autoload": {
+        "psr-4": {
+            "Brahmic\\Filler\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Brahmic\\Filler\\FillerServiceProvider"
+            ]
+        }
+    }
+}
