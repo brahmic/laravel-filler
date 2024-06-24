@@ -31,6 +31,11 @@ greatly speeds up development.
   - [HasMany](#hasmany)
   - [BelongsTo](#belongsto)
   - [BelongsToMany](#belongstomany)
+  - [MorphTo](#morphto)
+  - [MorphOne](#morphone)
+  - [MorphMany](#morphmany)
+  - [MorphToMany](#morphtomany)
+
 - [Output features](#output-features)
 
 ## Restrictions
@@ -284,6 +289,18 @@ fields through the user object, nor is it possible to create new organizations.
 This example is like a mixture of `HasMany` (in the sense that all non-represented records will be removed from the
 pivot) and `BlongsTo` (all fields except the `$primaryKey` field will be ignored, for the reasons explained above in
 the `belongsTo` section) . Please note that working with a pivot is also available.
+
+### MorphTo
+
+Supported, but not yet described. The principle of operation is similar to that described above.
+
+### MorphOne
+
+Supported, but not yet described. The principle of operation is similar to that described above.
+
+### MorphMany
+
+Supported, but not yet described. The principle of operation is similar to that described above.
 
 ---
 > Everything described works recursively, and is valid for any degree of nesting.
