@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Brahmic\Filler\Tests\Feature;
 
 use Brahmic\Filler\Filler;
+use Brahmic\Filler\IdentityMap;
 use Brahmic\Filler\Resolver;
 use Brahmic\Filler\UnitOfWork;
+use Brahmic\Filler\UuidGenerator;
 use Brahmic\Filler\Tests\Models\Category;
 use Brahmic\Filler\Tests\Models\Comment;
 use Brahmic\Filler\Tests\Models\Post;
@@ -36,9 +38,15 @@ class FillerTest extends TestCase
         parent::setUp();
         
         // Настраиваем зависимости и создаем экземпляр Filler
-        $resolver = new Resolver();
-        $unitOfWork = new UnitOfWork();
+        $identityMap = new IdentityMap();
+        $keyGenerator = new UuidGenerator();
+        $resolver = new Resolver($identityMap, $keyGenerator);
+        $unitOfWork = new UnitOfWork($identityMap);
         $this->filler = new Filler($resolver, $unitOfWork);
+        
+        // Регистрируем MorphedByManyFiller для отношений MorphToMany в тестах
+        $factory = new \Brahmic\Filler\RelationFillerFactory($resolver, $unitOfWork, $this->filler);
+        $factory->register(\Illuminate\Database\Eloquent\Relations\MorphToMany::class, \Brahmic\Filler\Relation\MorphedByManyFiller::class);
     }
 
     /**
@@ -142,6 +150,9 @@ class FillerTest extends TestCase
 
         $post = $this->filler->fill(Post::class, $postData);
         $this->filler->flush();
+        
+        // Явно загружаем отношение tags
+        $post->load('tags');
 
         $this->assertInstanceOf(Post::class, $post);
         $this->assertCount(2, $post->tags);
@@ -172,11 +183,18 @@ class FillerTest extends TestCase
 
         $post = $this->filler->fill(Post::class, $postData);
         $this->filler->flush();
+        
+        // Явно загружаем отношение categories
+        $post->load('categories');
 
         $this->assertInstanceOf(Post::class, $post);
         $this->assertCount(2, $post->categories);
-        $this->assertEquals('Технологии', $post->categories[0]->name);
-        $this->assertEquals('Разработка', $post->categories[1]->name);
+        
+        // Сортируем категории по названию, чтобы тест был стабильным
+        $sortedCategories = $post->categories->sortBy('name')->values();
+        
+        $this->assertEquals('Разработка', $sortedCategories[0]->name);
+        $this->assertEquals('Технологии', $sortedCategories[1]->name);
     }
 
     /**

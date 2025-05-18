@@ -6,6 +6,7 @@ namespace Brahmic\Filler\Relation;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasOneOrMany;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Str;
 
@@ -44,10 +45,10 @@ class HasOneFiller extends HasOneOrManyFiller
      * Устанавливает значение внешнего ключа в модели для связи HasOne
      *
      * @param Model $model Связанная модель
-     * @param HasOne $relation Объект отношения
+     * @param HasOneOrMany $relation Объект отношения
      * @param Model $related Родительская модель
      */
-    protected function setRelationField(Model $model, HasOne $relation, Model $related): void
+    protected function setRelationField(Model $model, HasOneOrMany $relation, Model $related): void
     {
         $model->{$relation->getForeignKeyName()} = $related?->{$relation->getLocalKeyName()};
     }

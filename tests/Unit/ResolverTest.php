@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Brahmic\Filler\Tests\Unit;
 
 use Brahmic\Filler\Resolver;
+use Brahmic\Filler\IdentityMap;
+use Brahmic\Filler\UuidGenerator;
 use Brahmic\Filler\Tests\Models\User;
 use Brahmic\Filler\Tests\TestCase;
 
@@ -25,8 +27,12 @@ class ResolverTest extends TestCase
     {
         parent::setUp();
         
-        // Создаем экземпляр Resolver
-        $this->resolver = new Resolver();
+        // Создаем зависимости для Resolver
+        $identityMap = new IdentityMap();
+        $keyGenerator = new UuidGenerator();
+        
+        // Создаем экземпляр Resolver с зависимостями
+        $this->resolver = new Resolver($identityMap, $keyGenerator);
         
         // Запускаем миграции для тестов
         $this->runMigrations();

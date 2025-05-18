@@ -30,6 +30,11 @@
             "Brahmic\\Filler\\": "src/"
         }
     },
+    "autoload-dev": {
+        "psr-4": {
+            "Brahmic\\Filler\\Tests\\": "tests/"
+        }
+    },
     "extra": {
         "laravel": {
             "providers": [

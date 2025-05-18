@@ -8,6 +8,7 @@ use Brahmic\Filler\Exceptions\FillerMappingException;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOneOrMany;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
@@ -60,10 +61,10 @@ class HasManyFiller extends HasOneOrManyFiller
      * Устанавливает значение внешнего ключа в связанной модели для отношения HasMany
      *
      * @param Model $model Родительская модель
-     * @param HasMany $relation Объект отношения
+     * @param HasOneOrMany $relation Объект отношения
      * @param Model $related Связанная модель
      */
-    protected function setRelationField(Model $model, HasMany $relation, Model $related): void
+    protected function setRelationField(Model $model, HasOneOrMany $relation, Model $related): void
     {
         $related->{$relation->getForeignKeyName()} = $model->{$relation->getLocalKeyName()};
     }

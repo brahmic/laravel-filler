@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Brahmic\Filler\Tests\Feature;
 
 use Brahmic\Filler\Filler;
+use Brahmic\Filler\IdentityMap;
 use Brahmic\Filler\Resolver;
 use Brahmic\Filler\UnitOfWork;
+use Brahmic\Filler\UuidGenerator;
 use Brahmic\Filler\Tests\Models\Category;
 use Brahmic\Filler\Tests\Models\City;
 use Brahmic\Filler\Tests\Models\Country;
@@ -36,9 +38,15 @@ class RelationFillerTest extends TestCase
         parent::setUp();
         
         // Настраиваем зависимости и создаем экземпляр Filler
-        $resolver = new Resolver();
-        $unitOfWork = new UnitOfWork();
+        $identityMap = new IdentityMap();
+        $keyGenerator = new UuidGenerator();
+        $resolver = new Resolver($identityMap, $keyGenerator);
+        $unitOfWork = new UnitOfWork($identityMap);
         $this->filler = new Filler($resolver, $unitOfWork);
+        
+        // Регистрируем MorphedByManyFiller для отношений MorphToMany в тестах
+        $factory = new \Brahmic\Filler\RelationFillerFactory($resolver, $unitOfWork, $this->filler);
+        $factory->register(\Illuminate\Database\Eloquent\Relations\MorphToMany::class, \Brahmic\Filler\Relation\MorphedByManyFiller::class);
     }
 
     /**
@@ -114,15 +122,18 @@ class RelationFillerTest extends TestCase
         $country = $this->filler->fill(Country::class, $countryData);
         $this->filler->flush();
 
-        // Теперь загрузим отношение HasManyThrough
-        $country->load('shops');
+        // Теперь загрузим отношение HasManyThrough с явной сортировкой
+        $country->load(['shops' => function($query) {
+            $query->orderBy('name', 'asc');
+        }]);
 
         // Проверяем что отношение HasManyThrough правильно работает
         $this->assertInstanceOf(Country::class, $country);
         $this->assertCount(3, $country->shops);
-        $this->assertEquals('Магазин в Нью-Йорке 1', $country->shops[0]->name);
-        $this->assertEquals('Магазин в Нью-Йорке 2', $country->shops[1]->name);
-        $this->assertEquals('Магазин в ЛА', $country->shops[2]->name);
+        // При сортировке по имени "Магазин в ЛА" будет первым (алфавитный порядок)
+        $this->assertEquals('Магазин в ЛА', $country->shops[0]->name);
+        $this->assertEquals('Магазин в Нью-Йорке 1', $country->shops[1]->name);
+        $this->assertEquals('Магазин в Нью-Йорке 2', $country->shops[2]->name);
     }
 
     /**
@@ -153,12 +164,19 @@ class RelationFillerTest extends TestCase
         // Заполняем модель Category с отношением MorphedByMany
         $category = $this->filler->fill(Category::class, $categoryData);
         $this->filler->flush();
+        
+        // Явно загружаем отношение posts
+        $category->load('posts');
 
         // Проверяем что отношение MorphedByMany правильно работает
         $this->assertInstanceOf(Category::class, $category);
         $this->assertCount(2, $category->posts);
-        $this->assertEquals('Рецепт 1', $category->posts[0]->title);
-        $this->assertEquals('Рецепт 2', $category->posts[1]->title);
+        
+        // Сортируем посты по названию, чтобы тест был стабильным
+        $sortedPosts = $category->posts->sortBy('title')->values();
+        
+        $this->assertEquals('Рецепт 1', $sortedPosts[0]->title);
+        $this->assertEquals('Рецепт 2', $sortedPosts[1]->title);
     }
 
     /**
@@ -173,6 +191,7 @@ class RelationFillerTest extends TestCase
         // Данные для обновления
         $userData = [
             'name' => 'Обновленный пользователь',
+            'email' => 'updated@example.com',
             'posts' => [
                 [
                     'id' => $post->id,

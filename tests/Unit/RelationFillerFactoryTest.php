@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Brahmic\Filler\Tests\Unit;
 
 use Brahmic\Filler\Filler;
+use Brahmic\Filler\IdentityMap;
 use Brahmic\Filler\RelationFillerFactory;
 use Brahmic\Filler\Resolver;
 use Brahmic\Filler\UnitOfWork;
+use Brahmic\Filler\UuidGenerator;
 use Brahmic\Filler\Relation\BelongsToFiller;
 use Brahmic\Filler\Relation\HasManyFiller;
 use Brahmic\Filler\Relation\HasOneFiller;
@@ -60,10 +62,17 @@ class RelationFillerFactoryTest extends TestCase
     {
         parent::setUp();
         
-        $this->resolver = new Resolver();
-        $this->unitOfWork = new UnitOfWork();
+        // Создаем зависимости
+        $identityMap = new IdentityMap();
+        $keyGenerator = new UuidGenerator();
+        
+        $this->resolver = new Resolver($identityMap, $keyGenerator);
+        $this->unitOfWork = new UnitOfWork($identityMap);
         $this->filler = new Filler($this->resolver, $this->unitOfWork);
         $this->factory = new RelationFillerFactory($this->resolver, $this->unitOfWork, $this->filler);
+        
+        // Для тестов явно регистрируем MorphedByManyFiller для отношения MorphToMany
+        $this->factory->register(\Illuminate\Database\Eloquent\Relations\MorphToMany::class, \Brahmic\Filler\Relation\MorphedByManyFiller::class);
         
         // Создаем модель для использования в тестах
         $this->user = new User();

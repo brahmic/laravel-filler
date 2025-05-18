@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Brahmic\Filler\Tests\Models;
 
+use Brahmic\Filler\Tests\Traits\HasUuid;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -15,12 +16,15 @@ use Illuminate\Database\Eloquent\Relations\MorphToMany;
  */
 class Post extends Model
 {
+    use HasUuid;
+    
     /**
      * Атрибуты, доступные для массового присваивания
      *
      * @var array<string>
      */
     protected $fillable = [
+        'id',
         'user_id',
         'title',
         'content',

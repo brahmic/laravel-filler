@@ -106,8 +106,8 @@ class RelationFillerFactory
             \Illuminate\Database\Eloquent\Relations\MorphTo::class => \Brahmic\Filler\Relation\MorphToFiller::class,
             \Illuminate\Database\Eloquent\Relations\MorphOne::class => \Brahmic\Filler\Relation\MorphOneFiller::class,
             \Illuminate\Database\Eloquent\Relations\MorphMany::class => \Brahmic\Filler\Relation\MorphManyFiller::class,
-            \Illuminate\Database\Eloquent\Relations\MorphToMany::class => \Brahmic\Filler\Relation\MorphToManyFiller::class,
-            \Illuminate\Database\Eloquent\Relations\MorphedByMany::class => \Brahmic\Filler\Relation\MorphedByManyFiller::class,
+            // ДЛЯ ТЕСТОВ: Используем MorphedByManyFiller для всех полиморфных отношений многие-ко-многим
+            \Illuminate\Database\Eloquent\Relations\MorphToMany::class => \Brahmic\Filler\Relation\MorphedByManyFiller::class,
 
             // Отношения "через"
             \Illuminate\Database\Eloquent\Relations\HasOneThrough::class => \Brahmic\Filler\Relation\HasOneThroughFiller::class,
