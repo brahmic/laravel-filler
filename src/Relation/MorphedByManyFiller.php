@@ -2,21 +2,28 @@
 
 namespace Brahmic\Filler\Relation;
 
+
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 
-class BelongsToManyFiller extends RelationFiller
+/**
+ * Филлер для отношений MorphedByMany
+ * 
+ * MorphedByMany - это "обратная" сторона MorphToMany отношения,
+ * с некоторыми отличиями в настройке полей
+ */
+class MorphedByManyFiller extends MorphToManyFiller
 {
     /**
      * @param Model $model
-     * @param Relation|BelongsToMany $relation
+     * @param Relation|MorphToMany $relation
      * @param array|null $data
      * @param string $relationName
      */
-    public function fill(Model $model, BelongsToMany|Relation $relation, ?array $data, string $relationName): void
+    public function fill(Model $model, MorphToMany|Relation $relation, ?array $data, string $relationName): void
     {
         // If no data provided, just do nothing, because of this is "to many" relation,
         // and we cant set this relation to null.
@@ -38,8 +45,11 @@ class BelongsToManyFiller extends RelationFiller
                 // Генерируем UUID для pivot-таблицы, если используется схема с id
                 $pivotData = array_merge(Arr::get($relatedData, 'pivot', []), [
                     'id' => (string) \Illuminate\Support\Str::uuid(), // Генерируем UUID для pivot-записи
-                    $relation->getForeignPivotKeyName() => $model->{$relation->getParentKeyName()},
-                    $relation->getRelatedPivotKeyName() => $relatedModel->{$relation->getRelatedKeyName()},
+                    // Для MorphedByMany морфный тип относится к связанной модели
+                    $relation->getMorphType()           => $relation->getMorphClass(),
+                    // В MorphedByMany ключи инвертированы относительно MorphToMany
+                    $relation->getForeignPivotKeyName() => $relatedModel->{$relation->getRelatedKeyName()},
+                    $relation->getRelatedPivotKeyName() => $model->{$relation->getParentKeyName()},
                 ]);
                 
                 $relatedModel->setRelation('pivot', $relation->newPivot(
@@ -48,10 +58,12 @@ class BelongsToManyFiller extends RelationFiller
             }) : null;
         });
 
-        // Build authentic collection for model.
-        $relatedCollection = $relation->getQuery()->getModel()->newCollection($relatedCollection->filter()->all());
+        // Filter out null values and build authentic collection for model.
+        $relatedCollection = $relation->getQuery()->getModel()->newCollection(
+            $relatedCollection->filter()->all()
+        );
 
-        // Используем attach вместо sync
+        // Для MorphedByMany лучше использовать attach вместо sync
         $this->uow->onFlush(function () use ($relation, $relatedCollection, $model) {
             // Сначала отсоединим все существующие связи
             if ($model->exists) {
@@ -65,6 +77,7 @@ class BelongsToManyFiller extends RelationFiller
                 // Удаляем ненужные поля из pivotData
                 unset($pivotData[$relation->getForeignPivotKeyName()]);
                 unset($pivotData[$relation->getRelatedPivotKeyName()]);
+                unset($pivotData[$relation->getMorphType()]);
                 
                 // Добавляем связь с нужными данными
                 $relation->attach($relatedModel->getKey(), $pivotData);

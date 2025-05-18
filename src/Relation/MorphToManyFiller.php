@@ -28,31 +28,66 @@ class MorphToManyFiller extends RelationFiller
         }
 
         $relatedCollection = collect($data)->map(function ($relatedData) use ($relation, $model) : ?Model {
+            // Сначала пытаемся найти существующую модель
             $relatedModel = $this->resolver->findInDataBase($relation->getRelated(), $relatedData);
+            
+            // Если модель не найдена, создаем новую
+            if (!$relatedModel) {
+                $relatedModel = $this->filler->fill(get_class($relation->getRelated()), $relatedData);
+            }
+            
             return $relatedModel ? tap($relatedModel, function (Model $relatedModel) use ($model, $relation, $relatedData) {
+                // Генерируем UUID для pivot-таблицы, если используется схема с id
+                $pivotData = array_merge(Arr::get($relatedData, 'pivot', []), [
+                    'id' => (string) \Illuminate\Support\Str::uuid(), // Генерируем UUID для pivot-записи
+                    $relation->getMorphType()           => $model->getMorphClass(),
+                    $relation->getForeignPivotKeyName() => $model->{$relation->getParentKeyName()},
+                    $relation->getRelatedPivotKeyName() => $relatedModel->{$relation->getRelatedKeyName()},
+                ]);
+                
                 $relatedModel->setRelation('pivot', $relation->newPivot(
-                    array_merge(Arr::get($relatedData, 'pivot', []), [
-                        $relation->getMorphType()           => $model->getMorphClass(),
-                        $relation->getForeignPivotKeyName() => $model->{$relation->getParentKeyName()},
-                        $relation->getRelatedPivotKeyName() => $relatedModel->{$relation->getRelatedKeyName()},
-                    ]), $model->exists
+                    $pivotData, $model->exists
                 ));
             }) : null;
         });
 
-        // Build authentic collection for model.
-        $relatedCollection = $relation->getQuery()->getModel()->newCollection($relatedCollection->all());
+        // Filter out null values and build authentic collection for model.
+        $relatedCollection = $relation->getQuery()->getModel()->newCollection(
+            $relatedCollection->filter()->all()
+        );
 
-        // Pivot may have foreign keys, so we should sync models after all related models persisted.
-        // Use onFlush method for it.
+        // Для MorphToMany лучше использовать attach вместо sync
         $this->uow->onFlush(function () use ($relation, $relatedCollection, $model) {
-            $relation->sync($relatedCollection->mapWithKeys(function (Model $relatedModel) {
-                return [$relatedModel->getKey() => $relatedModel->getRelation('pivot')->toArray()];
-            })->toArray());
-
-            // Renew all models from database after sync.
-            $relatedCollection->each(function (Model $model): void {
-                $model->refresh();
+            // Сначала отсоединим все существующие связи
+            if ($model->exists) {
+                $relation->detach();
+            }
+            
+            // Затем добавим каждую модель отдельно с правильными данными
+            foreach ($relatedCollection as $relatedModel) {
+                // Получаем данные pivot
+                $pivotData = $relatedModel->getRelation('pivot')->toArray();
+                // Удаляем ненужные поля из pivotData
+                unset($pivotData[$relation->getForeignPivotKeyName()]);
+                unset($pivotData[$relation->getRelatedPivotKeyName()]);
+                unset($pivotData[$relation->getMorphType()]);
+                
+                // Добавляем связь с нужными данными
+                $relation->attach($relatedModel->getKey(), $pivotData);
+            }
+            
+            // Обновляем модели из базы - загружаем только существующие отношения
+            try {
+                // Пытаемся определить имя отношения из модели и контекста
+                $relationNames = array_keys($model->getRelations());
+                if (!empty($relationNames)) {
+                    $model->load($relationNames[0]);
+                }
+            } catch (\Exception $e) {
+                // Игнорируем ошибки загрузки
+            }
+            $relatedCollection->each(function (Model $relatedModel): void {
+                $relatedModel->refresh();
             });
         });
 

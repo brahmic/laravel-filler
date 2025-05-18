@@ -1,20 +1,25 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Brahmic\Filler\Relation;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasOneOrMany;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Str;
 
-class HasOneFiller extends RelationFiller
+class HasOneFiller extends HasOneOrManyFiller
 {
     /**
-     * @param Model $model
-     * @param Relation|HasOne $relation
-     * @param array|null $data
-     * @param string $relationName
-     * @throws \Exception
+     * Заполняет отношение HasOne данными
+     *
+     * @param Model $model Родительская модель, содержащая отношение
+     * @param HasOne|Relation $relation Объект отношения
+     * @param array|null $data Данные для заполнения отношения
+     * @param string $relationName Имя отношения
+     * @throws \Exception Если произошла ошибка при обработке отношения
      */
     public function fill(Model $model, HasOne|Relation $relation, ?array $data, string $relationName): void
     {
@@ -36,7 +41,14 @@ class HasOneFiller extends RelationFiller
         $model->setRelation(Str::snake($relationName), $relatedModel);
     }
 
-    protected function setRelationField(Model $model, HasOne $relation, Model $related): void
+    /**
+     * Устанавливает значение внешнего ключа в модели для связи HasOne
+     *
+     * @param Model $model Связанная модель
+     * @param HasOneOrMany $relation Объект отношения
+     * @param Model $related Родительская модель
+     */
+    protected function setRelationField(Model $model, HasOneOrMany $relation, Model $related): void
     {
         $model->{$relation->getForeignKeyName()} = $related?->{$relation->getLocalKeyName()};
     }

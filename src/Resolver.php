@@ -50,7 +50,13 @@ class Resolver
 
     protected function build(Model $model, array $data): Model
     {
+        // Установка первичного ключа
         $model->{$model->getKeyName()} = $this->resolveKey($model, $data);
+        
+        // Заполнение всех атрибутов из данных
+        $fillableAttributes = array_intersect_key($data, array_flip($model->getFillable()));
+        $model->fill($fillableAttributes);
+        
         return $this->identityMap[$this->identityMap::resolveHashName($model, $data)] = $model;
     }
 
@@ -61,8 +67,40 @@ class Resolver
 
     public function find(Model $model, array $data): ?Model
     {
-        return isset($data[self::resolveKeyName($model)]) ?
-            $this->getCached($model, $data) ?? $this->findInDataBase($model, $data) : null;
+        // Сначала проверяем по первичному ключу
+        if (isset($data[self::resolveKeyName($model)])) {
+            return $this->getCached($model, $data) ?? $this->findInDataBase($model, $data);
+        }
+        
+        // Если первичный ключ не найден, пытаемся искать по другим уникальным атрибутам
+        return $this->findByUniqueAttributes($model, $data);
+    }
+    
+    /**
+     * Ищет модель по уникальным атрибутам (например, email)
+     *
+     * @param Model $model
+     * @param array $data
+     * @return Model|null
+     */
+    protected function findByUniqueAttributes(Model $model, array $data): ?Model
+    {
+        // Проверяем атрибуты, которые могут быть уникальными
+        $uniqueAttributes = ['email']; // Можно расширить список уникальных атрибутов
+        
+        foreach ($uniqueAttributes as $attribute) {
+            if (isset($data[$attribute])) {
+                $query = $model->newQuery()->where($attribute, $data[$attribute]);
+                $resultModel = $query->first();
+                
+                if ($resultModel instanceof Model) {
+                    $this->identityMap->remember($resultModel);
+                    return $resultModel;
+                }
+            }
+        }
+        
+        return null;
     }
 
     public static function resolveKeyName(Model $model)

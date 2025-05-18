@@ -35,8 +35,8 @@ greatly speeds up development.
   - [MorphOne](#morphone)
   - [MorphMany](#morphmany)
   - [MorphToMany](#morphtomany)
-
 - [Output features](#output-features)
+- [Testing](#testing)
 
 ## Restrictions
 
@@ -335,6 +335,24 @@ For example:
 ```
 
 [👆](#content)
+## Testing
+
+Пакет имеет полный набор тестов для проверки его функциональности. Для запуска тестов можно использовать удобный скрипт:
+
+```bash
+# Запуск всех тестов
+./run-tests.sh all
+
+# Запуск только модульных тестов
+./run-tests.sh unit
+
+# Запуск только функциональных тестов
+./run-tests.sh feature
+```
+
+Подробная информация о тестировании доступна в [README-TESTING.md](README-TESTING.md).
+
+[👆](#content)
 
 ## TODO
 
@@ -342,5 +360,6 @@ For example:
 - add a description of polymorphic relationships to the readme
 
 [👆](#content)
+
 
 

@@ -1,12 +1,17 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Brahmic\Filler;
 
 use Exception;
 use Brahmic\Filler\Relation\BelongsToManyFiller;
 use Brahmic\Filler\Relation\BelongsToFiller;
 use Brahmic\Filler\Relation\HasManyFiller;
+use Brahmic\Filler\Relation\HasManyThroughFiller;
 use Brahmic\Filler\Relation\HasOneFiller;
+use Brahmic\Filler\Relation\HasOneThroughFiller;
+use Brahmic\Filler\Relation\MorphedByManyFiller;
 use Brahmic\Filler\Relation\MorphManyFiller;
 use Brahmic\Filler\Relation\MorphOneFiller;
 use Brahmic\Filler\Relation\MorphToManyFiller;
@@ -16,7 +21,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasOneThrough;
+use Illuminate\Database\Eloquent\Relations\MorphedByMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
@@ -33,32 +41,36 @@ class Filler
     private Resolver $resolver;
 
     /**
-     * @var RelationFiller[]
-     */
-    protected array $relationFillers = [];
-    /**
-     * @var UnitOfWork
+     * Unit of Work для управления транзакциями
      */
     private UnitOfWork $uow;
+    
+    /**
+     * Фабрика филлеров отношений
+     */
+    private RelationFillerFactory $relationFillerFactory;
 
     /**
-     * Filler constructor.
-     * @param Resolver $resolver
-     * @param UnitOfWork $uow
+     * Создает новый экземпляр филлера
+     *
+     * @param Resolver $resolver Резолвер для работы с моделями
+     * @param UnitOfWork $uow Unit of Work для управления изменениями
      */
     public function __construct(Resolver $resolver, UnitOfWork $uow)
     {
         $this->resolver = $resolver;
         $this->uow = $uow;
-        $this->initRelationFillers();
+        $this->relationFillerFactory = new RelationFillerFactory($resolver, $uow, $this);
     }
 
     /**
-     * @param mixed|Model|string $model
-     * @param array|null $data
-     * @return Model|null
+     * Заполняет модель данными и рекурсивно обрабатывает все связанные отношения
+     *
+     * @param Model|string $model Модель или класс модели
+     * @param array|null $data Данные для заполнения
+     * @return Model|null Заполненная модель или null, если данных нет
      */
-    public function fill(mixed $model, ?array $data): ?Model
+    public function fill(Model|string $model, ?array $data): ?Model
     {
         assert(is_subclass_of($model, Model::class));
 
@@ -79,25 +91,39 @@ class Filler
         return $model;
     }
 
-    public function getRelationFiller($model, $relationName): ?RelationFiller
+    /**
+     * Получает соответствующий филлер отношений для указанной модели и имени отношения
+     *
+     * @param Model|string $model Модель или класс модели
+     * @param string $relationName Имя отношения
+     * @return RelationFiller|null Экземпляр филлера отношений или null, если не найден
+     * @throws \Exception Если не удалось найти подходящий филлер отношений
+     */
+    public function getRelationFiller(Model|string $model, string $relationName): RelationFiller
     {
         if (is_string($model)) {
             $model = new $model;
         }
 
         $relation = $this->extractRelation($model, $relationName);
-
-        foreach ($this->relationFillers as $class => $filler) {
-            if ($relation instanceof $class) {
-                return $filler;
-            }
+        $filler = $this->relationFillerFactory->create($relation);
+        
+        if ($filler === null) {
+            throw new \Exception(sprintf(
+                'Не удалось найти филлер для отношения %s::%s типа %s',
+                get_class($model),
+                $relationName,
+                get_class($relation)
+            ));
         }
-
-        return null; //todo throw exception?
+        
+        return $filler;
     }
 
     /**
-     * @throws Exception
+     * Применяет все накопленные изменения к базе данных в транзакции
+     *
+     * @throws Exception Если произошла ошибка при сохранении изменений
      */
     public function flush(): void
     {
@@ -105,9 +131,11 @@ class Filler
     }
 
     /**
-     * @param string $model
-     * @param array $data
-     * @return Model
+     * Резолвит модель по её классу и данным
+     *
+     * @param string $model Имя класса модели
+     * @param array $data Данные модели
+     * @return Model Экземпляр модели
      */
     public function resolve(string $model, array $data): Model
     {
@@ -115,8 +143,10 @@ class Filler
     }
 
     /**
-     * @param Model $model
-     * @param array $data
+     * Заполняет все отношения модели на основе предоставленных данных
+     *
+     * @param Model $model Модель для заполнения отношений
+     * @param array $data Данные, содержащие информацию об отношениях
      */
     protected function fillRelations(Model $model, array $data): void
     {
@@ -139,9 +169,11 @@ class Filler
     }
 
     /**
-     * @param Model $model
-     * @param string $relationName
-     * @param array|null $relationData
+     * Заполняет конкретное отношение модели
+     *
+     * @param Model $model Модель, содержащая отношение
+     * @param string $relationName Имя отношения
+     * @param array|null $relationData Данные для заполнения отношения
      */
     protected function fillRelation(Model $model, string $relationName, ?array $relationData): void
     {
@@ -149,26 +181,23 @@ class Filler
             ->fill($model, $this->extractRelation($model, $relationName), $relationData, $relationName);
     }
 
-    private function initRelationFillers(): void
-    {
-        $this->relationFillers = [
-            MorphTo::class => new MorphToFiller($this->resolver, $this->uow, $this),
-            HasMany::class => new HasManyFiller($this->resolver, $this->uow, $this),
-            BelongsToMany::class => new BelongsToManyFiller($this->resolver, $this->uow, $this),
-            BelongsTo::class => new BelongsToFiller($this->resolver, $this->uow, $this),
-            HasOne::class => new HasOneFiller($this->resolver, $this->uow, $this),
-            MorphOne::class => new MorphOneFiller($this->resolver, $this->uow, $this),
-            MorphMany::class => new MorphManyFiller($this->resolver, $this->uow, $this),
-            MorphToMany::class => new MorphToManyFiller($this->resolver, $this->uow, $this),
-        ];
-    }
 
+    /**
+     * Извлекает объект отношения из модели по имени отношения
+     *
+     * @param Model $model Модель, содержащая отношение
+     * @param string $relationName Имя отношения
+     * @return Relation Объект отношения
+     */
     private function extractRelation(Model $model, string $relationName): Relation
     {
         return call_user_func([$model, $relationName]);
     }
 
 
+    /**
+     * Очищает состояние Unit of Work
+     */
     public function clear(): void
     {
         $this->uow->clear();

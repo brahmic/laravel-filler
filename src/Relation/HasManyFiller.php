@@ -1,23 +1,29 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Brahmic\Filler\Relation;
 
 use Brahmic\Filler\Exceptions\FillerMappingException;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOneOrMany;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 
-class HasManyFiller extends RelationFiller
+class HasManyFiller extends HasOneOrManyFiller
 {
 
     /**
-     * @param Model $model
-     * @param Relation|HasMany $relation
-     * @param array|null $data
-     * @param string $relationName
+     * Заполняет отношение HasMany данными
+     *
+     * @param Model $model Родительская модель, содержащая отношение
+     * @param HasMany|Relation $relation Объект отношения
+     * @param array|null $data Данные для заполнения отношения
+     * @param string $relationName Имя отношения
+     * @throws FillerMappingException Если формат данных для отношения HasMany неверный
      */
     public function fill(Model $model, HasMany|Relation $relation, ?array $data, string $relationName): void
     {
@@ -36,18 +42,12 @@ class HasManyFiller extends RelationFiller
         $existsModels = $this->resolver->loadRelation($model, $relationName);
 
         $relatedModels = $relation->getQuery()->getModel()->newCollection()
-            ->concat(array_map(function (array $modelData) use ($relation, $model, $relationName, $data) {
+            ->concat(array_map(fn (array $modelData) => $this->filler->fill(get_class($relation->getRelated()), $modelData), $data));
 
-                return $this->filler->fill(get_class($relation->getRelated()), $modelData);
-            }, $data));
-
-        $existsModels->filter(function (Model $existsModel) use ($relatedModels): bool {
-            return $relatedModels->filter(function (Model $relatedModel) use ($existsModel): bool {
-                return $existsModel->is($relatedModel);
-            })->isEmpty();
-        })->each(function (Model $model) use ($relation): void {
-            $this->uow->destroy($model);
-        });
+        $existsModels->filter(fn (Model $existsModel) => $relatedModels->filter(
+            fn (Model $relatedModel) => $existsModel->is($relatedModel)
+        )->isEmpty()
+        )->each(fn (Model $model) => $this->uow->destroy($model));
 
         $relatedModels->each(function (Model $related) use ($relation, $model, $relationName): void {
             $this->setRelationField($model, $relation, $related);
@@ -57,7 +57,14 @@ class HasManyFiller extends RelationFiller
         $model->setRelation(Str::snake($relationName), $relatedModels);
     }
 
-    protected function setRelationField(Model $model, HasMany $relation, Model $related): void
+    /**
+     * Устанавливает значение внешнего ключа в связанной модели для отношения HasMany
+     *
+     * @param Model $model Родительская модель
+     * @param HasOneOrMany $relation Объект отношения
+     * @param Model $related Связанная модель
+     */
+    protected function setRelationField(Model $model, HasOneOrMany $relation, Model $related): void
     {
         $related->{$relation->getForeignKeyName()} = $model->{$relation->getLocalKeyName()};
     }
