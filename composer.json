@@ -19,6 +19,11 @@
         "illuminate/support": "^10.0|^11.0|^12.0",
         "ramsey/uuid": "^4.1.1"
     },
+    "require-dev": {
+        "phpunit/phpunit": "^10.0",
+        "orchestra/testbench": "^8.0|^9.0|^10.0",
+        "mockery/mockery": "^1.5"
+    },
     "minimum-stability": "stable",
     "autoload": {
         "psr-4": {
