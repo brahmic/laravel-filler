@@ -41,7 +41,7 @@ return [
     */
     'metadata_cache' => [
         // Включить кеширование метаданных между запросами
-        'enabled' => env('FILLER_METADATA_CACHE_ENABLED', true),
+        'enabled' => env('FILLER_METADATA_CACHE_ENABLED', false),
         
         // Время жизни кеша в минутах
         'ttl' => env('FILLER_METADATA_CACHE_TTL', 1440), // 24 часа
