@@ -357,7 +357,6 @@ For example:
 ## TODO
 
 - add the ability to persist an entity that has not passed through the hydrator
-- add a description of polymorphic relationships to the readme
 
 [👆](#content)
 
