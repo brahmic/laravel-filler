@@ -17,6 +17,7 @@ use Brahmic\Filler\Relation\MorphOneFiller;
 use Brahmic\Filler\Relation\MorphToManyFiller;
 use Brahmic\Filler\Relation\MorphToFiller;
 use Brahmic\Filler\Relation\RelationFiller;
+use Brahmic\Filler\Support\ModelMetadataCache;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -49,6 +50,11 @@ class Filler
      * Фабрика филлеров отношений
      */
     private RelationFillerFactory $relationFillerFactory;
+    
+    /**
+     * Кеш метаданных моделей
+     */
+    private ModelMetadataCache $metadataCache;
 
     /**
      * Создает новый экземпляр филлера
@@ -61,6 +67,7 @@ class Filler
         $this->resolver = $resolver;
         $this->uow = $uow;
         $this->relationFillerFactory = new RelationFillerFactory($resolver, $uow, $this);
+        $this->metadataCache = ModelMetadataCache::getInstance();
     }
 
     /**
@@ -150,20 +157,41 @@ class Filler
      */
     protected function fillRelations(Model $model, array $data): void
     {
-        $relations = Arr::except($data, $model->getFillable());
-
+        $modelClass = get_class($model);
+        $metadata = $this->metadataCache->get($modelClass);
+        $config = config('filler.metadata_cache', []);
+        
+        // Используем fillable из метаданных или из модели
+        $fillable = ($config['cache_fillable'] ?? true) ?
+            $metadata->fillableFields :
+            $model->getFillable();
+            
+        $relations = Arr::except($data, $fillable);
+        
         foreach ($relations as $relation => $relationData) {
-
-            if ($model->isRelation($relation)) {
-
+            // Проверка наличия отношения с использованием кеша, если он включен
+            if (($config['cache_relations'] ?? true) && $metadata->hasRelation($relation)) {
                 $this->fillRelation($model, $relation, $relationData);
+                continue;
             }
-
-            $relation = Str::camel($relation);
-
+            
+            // Проверка с преобразованием в camelCase с использованием кеша
+            $camelRelation = Str::camel($relation);
+            if (($config['cache_relations'] ?? true) && $metadata->hasRelation($camelRelation)) {
+                $this->fillRelation($model, $camelRelation, $relationData);
+                continue;
+            }
+            
+            // Если кеш отношений отключен или отношение не найдено в кеше,
+            // используем стандартный метод isRelation()
             if ($model->isRelation($relation)) {
-
                 $this->fillRelation($model, $relation, $relationData);
+                continue;
+            }
+            
+            // Проверка с преобразованием в camelCase без кеша
+            if ($model->isRelation($camelRelation)) {
+                $this->fillRelation($model, $camelRelation, $relationData);
             }
         }
     }

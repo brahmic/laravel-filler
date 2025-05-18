@@ -48,5 +48,21 @@ abstract class TestCase extends Orchestra
         // Настраиваем конфигурацию пакета
         $app['config']->set('filler.key_generator', \Brahmic\Filler\UuidGenerator::class);
         $app['config']->set('filler.relation_fillers', []);
+        
+        // Настраиваем кеширование метаданных для тестов
+        $app['config']->set('filler.metadata_cache', [
+            'enabled' => true,
+            'ttl' => 60,
+            'cache_relations' => true,
+            'cache_fillable' => true,
+            'cache_casts' => true,
+        ]);
+        
+        // Настраиваем драйвер кеша для тестов (array)
+        $app['config']->set('cache.default', 'array');
+        $app['config']->set('cache.stores.array', [
+            'driver' => 'array',
+            'serialize' => false,
+        ]);
     }
 }
