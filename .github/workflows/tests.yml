@@ -9,7 +9,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    
+
     strategy:
       fail-fast: true
       matrix:
@@ -19,13 +19,16 @@ jobs:
         include:
           - laravel: 10.*
             testbench: 8.*
+            phpunit: ^10.0
           - laravel: 11.*
             testbench: 9.*
+            phpunit: ^10.0
           - laravel: 12.*
             testbench: 10.*
-    
-    name: P${{ matrix.php }} - L${{ matrix.laravel }} - ${{ matrix.stability }}
-    
+            phpunit: ^11.5
+
+    name: PHP ${{ matrix.php }} - Laravel ${{ matrix.laravel }} - ${{ matrix.stability }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -36,11 +39,18 @@ jobs:
           php-version: ${{ matrix.php }}
           extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite
           coverage: none
-          
-      - name: Install dependencies
+
+      - name: Require matching PHPUnit version
+        run: |
+          composer require --dev "phpunit/phpunit:${{ matrix.phpunit }}" --no-interaction --no-update
+
+      - name: Install Laravel + Testbench
         run: |
           composer require "laravel/framework:${{ matrix.laravel }}" "orchestra/testbench:${{ matrix.testbench }}" --no-interaction --no-update
-          composer update --${{ matrix.stability }} --prefer-dist --no-interaction
-      
-      - name: Execute tests
+
+      - name: Update all dependencies
+        run: |
+          composer update --${{ matrix.stability }} --prefer-dist --no-interaction --with-all-dependencies
+
+      - name: Run tests
         run: vendor/bin/phpunit

@@ -17,10 +17,13 @@ jobs:
         include:
           - laravel: 10.*
             testbench: 8.*
+            phpunit: ^10.0
           - laravel: 11.*
             testbench: 9.*
+            phpunit: ^10.0
           - laravel: 12.*
             testbench: 10.*
+            phpunit: ^11.5
 
     name: P${{ matrix.php }} - L${{ matrix.laravel }}
 
@@ -35,10 +38,13 @@ jobs:
           extensions: dom, curl, libxml, mbstring, zip, pdo, sqlite, pdo_sqlite
           coverage: none
 
+      - name: Require matching PHPUnit
+        run: composer require --dev "phpunit/phpunit:${{ matrix.phpunit }}" --no-interaction --no-update
+
       - name: Install dependencies
         run: |
           composer require "laravel/framework:${{ matrix.laravel }}" "orchestra/testbench:${{ matrix.testbench }}" --no-interaction --no-update
-          composer update --prefer-dist --no-interaction --no-progress
+          composer update --prefer-dist --no-interaction --with-all-dependencies
 
       - name: Execute tests
         run: vendor/bin/phpunit
